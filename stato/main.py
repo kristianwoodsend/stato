@@ -6,9 +6,9 @@ from fuzzywuzzy import process
 
 get_data()
 
-main = load_obj("players")
+main = load_obj("fd_players")
 
-nf_data = load_obj("nf_data")
+nf_data = load_obj("dfc_data")
 
 
 for pos in POSITIONS:

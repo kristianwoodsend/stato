@@ -3,6 +3,8 @@ from bs4.element import Tag
 import urllib2
 import requests
 import csv
+import re
+import json
 from fake_useragent import UserAgent
 
 from stato.util import *
@@ -106,6 +108,33 @@ def get_nf_data(data_file):
     save_obj(list(set(players)), data_file)
 
 
+def get_daily_fantasy_cafe_data(data_file):
+    url = 'https://www.dailyfantasycafe.com/tools/lineupoptimizer/nfl'
+    response = urllib2.urlopen(url)
+    players = []
+    soup = BeautifulSoup(response.read(), 'html.parser')
+    print soup
+    vars = soup.find_all("script")[1].string
+    p = re.compile('players\s=\s(.*);')
+    m = p.findall(vars)
+    v = json.loads(m[0])
+    print v
+    print
+    for p in v:
+        try:
+            player_id = p['id']
+            name = p['name']['fanduel']
+            pos = p['position']['fanduel']
+            fp = p['projections']['fanduel_gpp']
+            team = p['team']
+            salary = p['salaries']['fanduel']
+            print name, pos, fp, team, salary
+            players.append(Player(pos + str(player_id), name, pos, team, salary, fp))
+        except KeyError:
+            print '** ', p
+    save_obj(list(set(players)), data_file)
+
+
 def get_player_data(data_file):
     urls = [
         ('qb', 'http://www.footballdb.com/players/current.html?pos=QB'),
@@ -139,17 +168,37 @@ def get_player_data(data_file):
 projections = [
     ("NumberFire", "nf_data", get_nf_data),
     ("RotoGrinders", "rg_data", get_rg_data),
-    ("RotoWire", "rw_data", get_rw_data)
+    ("RotoWire", "rw_data", get_rw_data),
+    ("DFCafe", "dfc_data", get_daily_fantasy_cafe_data),
 ]
+
+
+def get_game_data_from_fd_csv(input_file, data_file):
+    players = []
+    with open(input_file) as csvfile:
+        reader = csv.DictReader(csvfile)
+
+        for row in reader:
+            name = row['First Name'] + ' ' + row['Last Name']
+            pos = row['Position']
+            team = row['Team']
+            player_id = row["Id"]
+            salary = row['Salary']
+            fd_points = row['FPPG']
+            players.append(Player(pos + player_id, name, pos, team, salary, fd_points))
+
+    save_obj(list(set(players)), data_file)
 
 
 def get_data():
 
-    if load_obj("players"):
+    if load_obj("fd_players"):
         print "Team players already exists"
     else:
         print "Processing team players"
-        get_player_data("players")
+        fd_filename = '/Users/kristianwoodsend/Downloads/FanDuel-NFL-2016-09-18-16345-players-list.csv'
+        get_game_data_from_fd_csv(fd_filename, "fd_players")
+
 
     for title, data_file, func in projections:
         if load_obj(data_file):
@@ -158,3 +207,4 @@ def get_data():
             print "Processing {}".format(title)
             func(data_file)
 
+get_data()

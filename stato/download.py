@@ -165,7 +165,7 @@ def get_player_data(data_file):
     save_obj(list(set(players)), data_file)
 
 
-projections = [
+projection_sources = [
     ("NumberFire", "nf_data", get_nf_data),
     ("RotoGrinders", "rg_data", get_rg_data),
     ("RotoWire", "rw_data", get_rw_data),
@@ -182,10 +182,10 @@ def get_game_data_from_fd_csv(input_file, data_file):
             name = row['First Name'] + ' ' + row['Last Name']
             pos = row['Position']
             team = row['Team']
-            player_id = row["Id"]
+            player_id = row["Id"].split('-')[1]
             salary = row['Salary']
             fd_points = row['FPPG']
-            players.append(Player(pos + player_id, name, pos, team, salary, fd_points))
+            players.append(Player(player_id, name, pos, team, salary, fd_points))
 
     save_obj(list(set(players)), data_file)
 
@@ -200,7 +200,7 @@ def get_data():
         get_game_data_from_fd_csv(fd_filename, "fd_players")
 
 
-    for title, data_file, func in projections:
+    for title, data_file, func in projection_sources:
         if load_obj(data_file):
             print "{} already exists".format(title)
         else:

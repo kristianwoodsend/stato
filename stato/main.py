@@ -1,4 +1,4 @@
-from stato.download import get_data, projections
+from stato.download import get_data, projection_sources
 from stato.optimise import optimise
 from stato.util import *
 

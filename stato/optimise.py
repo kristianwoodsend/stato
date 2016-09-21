@@ -11,15 +11,15 @@ def optimise(player_list):
 
     SportConfig = namedtuple('SportConfig', "salary_cap max_players formation team_limit")
 
-    config = SportConfig(salary_cap=60000.0,
-                         max_players=9,
+    config = SportConfig(salary_cap=(60000.0-4700),
+                         max_players=8,
                          formation=[
                              {'pos': 'QB', 'n': 1},
                              {'pos': 'RB', 'n': 2},
                              {'pos': 'WR', 'n': 3},
                              {'pos': 'TE', 'n': 1},
                              {'pos': 'K',  'n': 1},
-                             {'pos': 'D',  'n': 1},
+                             # {'pos': 'D',  'n': 1},
                          ],
                          team_limit=4)
 

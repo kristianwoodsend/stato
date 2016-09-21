@@ -8,6 +8,20 @@ from fake_useragent import UserAgent
 from stato.util import *
 
 
+def get_slate_from_csv(slate_csv):
+    players = []
+
+    with open(slate_csv, 'rb') as csvfile:
+        reader = csv.reader(csvfile)
+
+        next(reader, None)
+        for row in reader:
+            players.append(
+                Player(row[0], row[2] + ' ' + row[3], row[1], row[8], int(row[6]), float(row[4])))
+
+    return players
+
+
 def get_rw_data(data_file):
     url = "http://www.rotowire.com/daily/nfl/optimizer.php?site=FanDuel&sport=NFL"
 
@@ -142,14 +156,14 @@ projections = [
     ("RotoWire", "rw_data", get_rw_data)
 ]
 
+    # if load_obj("players"):
+    #     print "Team players already exists"
+    # else:
+    #     print "Processing team players"
+    #     get_player_data("players")
+
 
 def get_data():
-
-    if load_obj("players"):
-        print "Team players already exists"
-    else:
-        print "Processing team players"
-        get_player_data("players")
 
     for title, data_file, func in projections:
         if load_obj(data_file):

@@ -19,7 +19,7 @@ def optimise(player_list):
                              {'pos': 'WR', 'n': 3},
                              {'pos': 'TE', 'n': 1},
                              {'pos': 'K',  'n': 1},
-                             # {'pos': 'D',  'n': 1},
+                             {'pos': 'D',  'n': 1},
                          ],
                          team_limit=4)
 

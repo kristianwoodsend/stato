@@ -81,35 +81,48 @@ def create_player_list(players, weights):
 #     print_team(title, team, score)
 #
 
-get_data()
 
-main = load_obj("fd_players")
+def merge_sources(main, sources):
+    player_dict_list = {}
+    for (src_name, src_file, src_fn) in sources:
+        print src_name, src_file
+        src_data = load_obj(src_file)
+        pairs = match(main, src_data)
 
-player_dict_list = {}
-for (src_name, src_file, src_fn) in projection_sources:
-    print src_name, src_file
-    src_data = load_obj(src_file)
-    pairs = match(main, src_data)
+        for (m, p) in pairs:
+            try:
+                pd = player_dict_list[m.id]
+            except KeyError:
+                player_dict_list[m.id] = {'player_id': m.id, 'name': m.name, 'position': m.position,
+                                          'team_code': m.team_code, 'salary': m.salary}
+                pd = player_dict_list[m.id]
+                try:
+                    pd['final_score'] = m.fp
+                except KeyError:
+                    pass  # no final score available
+            pd[src_name] = p.fp
+    return player_dict_list
 
-    for (m, p) in pairs:
-        try:
-            pd = player_dict_list[m.id]
-        except KeyError:
-            player_dict_list[m.id] = {'player_id': m.id, 'name': m.name, 'position': m.position, 'team_code': m.team_code, 'salary': m.salary}
-            pd = player_dict_list[m.id]
-        pd[src_name] = p.fp
 
-for p, v in player_dict_list.items():
-    print p, v
 
-STEPS = 2
-for (rw, nf, rg, dfc) in product(range(STEPS), range(STEPS), range(STEPS), range(STEPS)):
-    if rw == nf == rg == dfc == 0.0:
-        continue
-    weights = {'RotoWire': float(rw), 'NumberFire': float(nf), 'RotoGrinders': float(rg), 'DFCafe': float(dfc)}
-    player_list = create_player_list(player_dict_list, weights)
-    score, team = optimise(player_list)
-    print
-    print weights
-    print_team('final_score', team, score)
-    print
+if __name__ == "__main__":
+    get_data()
+
+    main = load_obj("fd_players")
+    player_dict_list = merge_sources(main, projection_sources)
+
+
+    for p, v in player_dict_list.items():
+        print p, v
+
+    STEPS = 2
+    for (rw, nf, rg, dfc) in product(range(STEPS), range(STEPS), range(STEPS), range(STEPS)):
+        if rw == nf == rg == dfc == 0.0:
+            continue
+        weights = {'RotoWire': float(rw), 'NumberFire': float(nf), 'RotoGrinders': float(rg), 'DFCafe': float(dfc)}
+        player_list = create_player_list(player_dict_list, weights)
+        score, team = optimise(player_list)
+        print
+        print weights
+        print_team('final_score', team, score)
+        print

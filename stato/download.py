@@ -190,6 +190,22 @@ def get_game_data_from_fd_csv(input_file, data_file):
     save_obj(list(set(players)), data_file)
 
 
+def get_game_data_from_final_scores(input_file, data_file):
+    players = []
+    with open(input_file) as csvfile:
+        reader = csv.DictReader(csvfile)
+
+        for row in reader:
+            name = row['first_name'] + ' ' + row['last_name']
+            pos = row['position']
+            team = row['team_code']
+            player_id = row["player_id"]
+            salary = row['salary']
+            fd_points = row['final_score']
+            players.append(Player(player_id, name, pos, team, salary, fd_points))
+    save_obj(list(set(players)), data_file)
+
+
 def get_data():
 
     if load_obj("fd_players"):
@@ -198,6 +214,13 @@ def get_data():
         print "Processing team players"
         fd_filename = '/Users/kristianwoodsend/Downloads/FanDuel-NFL-2016-09-18-16345-players-list.csv'
         get_game_data_from_fd_csv(fd_filename, "fd_players")
+
+    if load_obj("fd_players_final"):
+        print "Team players final scores already exists"
+    else:
+        print "Processing team players final scores"
+        fd_filename = '../projections/week2_final_scores.csv'
+        get_game_data_from_final_scores(fd_filename, "fd_players_final")
 
 
     for title, data_file, func in projection_sources:

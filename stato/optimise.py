@@ -1,17 +1,8 @@
 import pulp
 from collections import namedtuple
+from util import SportConfig
 
-
-def optimise(player_list):
-
-    # Find the highest scoring team for a given game_id and list of players
-    # game_id, player_list = game_row
-
-    player_list = [p for p in player_list if p.salary > 0]
-
-    SportConfig = namedtuple('SportConfig', "salary_cap max_players formation team_limit")
-
-    config = SportConfig(salary_cap=60000.0,
+NFL_CONFIG = SportConfig(salary_cap=60000.0,
                          max_players=9,
                          formation=[
                              {'pos': 'QB', 'n': 1},
@@ -22,6 +13,14 @@ def optimise(player_list):
                              {'pos': 'D',  'n': 1},
                          ],
                          team_limit=4)
+
+
+def optimise(player_list, config=NFL_CONFIG):
+
+    # Find the highest scoring team for a given game_id and list of players
+    # game_id, player_list = game_row
+
+    player_list = [p for p in player_list if p.salary > 0]
 
     var_list = [pulp.LpVariable('P' + p.id, cat='Binary') for p in player_list]
     d_players = dict((v.name, p) for (v, p) in zip(var_list, player_list))
@@ -52,14 +51,6 @@ def optimise(player_list):
     prob += pulp.lpDot(var_list, scores)
 
     # solve the optimisation problem
-    # the precompiled cbc solver file needs to be supplied by spark-submit
-    # cbc_path = pyspark.SparkFiles.get('cbc')
-    # solver = pulp.solvers.COIN_CMD(path=cbc_path)
-
-    # print '============='
-    # print 'LP Problem: '
-    # print prob
-
     pulp.PULP_CBC_CMD().solve(prob)
 
     team = []

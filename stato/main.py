@@ -1,141 +1,101 @@
-import sys
-import math
-
-from fuzzywuzzy import process
-
-from stato.download import get_data, projection_sources, get_slate_from_csv
-from stato.optimise import optimise
-from stato.util import *
-from stato.ref_data import PLAYERS, TEAM_CODE_MAPPINGS, TEAM_NAME_MAPPINGS
+import argparse
+from util import *
+from match import match_player_ids, avg_team
+from optimise import optimise, NFL_CONFIG
+from download import projection_sources
 
 
-def map_team_name(code):
-    code = code.strip()
-    if code in TEAM_CODE_MAPPINGS:
-        code = TEAM_CODE_MAPPINGS.get(code)
-    return TEAM_NAME_MAPPINGS.get(code)
+def modify_conf(config, player):
+    return SportConfig(
+        salary_cap=config.salary_cap - float(player.salary),
+        max_players=config.max_players - 1,
+        formation=[
+            {'pos': pos["pos"], 'n': pos["n"] - (1 if pos["pos"] == player.position else 0)}
+            for pos in config.formation if pos["n"]
+        ],
+        team_limit=4,
+    )
 
 
-def get_player(player_list, name):
-    for player in player_list:
-        if player.name == name:
-            return player
-    return None
+def optimize_team(args):
+    fd_players = load_obj("fd_players")
+    if args.xp:
+        fd_players = filter(lambda p: p.id not in args.xp, fd_players)
+
+    exclude_sources = args.xs or []
+
+    matched_players = [(title, match_player_ids(fd_players, load_obj(source)))
+                       for title, source, _ in projection_sources
+                       if source not in exclude_sources]
+
+    config = NFL_CONFIG
+    forced_players = []
+
+    if args.fp:
+        for pid in args.fp:
+            p = get_player(fd_players, pid)
+            config = modify_conf(config, p)
+            forced_players.append(p)
+
+    for title, src_players, in matched_players:
+        score, team = optimise([p for p in src_players if p not in forced_players], config)
+        team.extend([get_player(src_players, p.id) for p in forced_players])
+        print_team(title, team, score)
+
+    avg = avg_team(fd_players, [[p for p in src_players if p not in team]
+                                for _, team in matched_players])
+    score, team = optimise(avg, config)
+    team.extend([get_player(avg, p.id) for p in forced_players])
+    print_team('Averaged', team, score)
 
 
-def fuzzy_match(options, text):
-    match = process.extract(text, options, limit=1)
-    if len(match) == 1:
-        match, score = match[0]
-        if score >= 80:
-            return match
-    return None
+def list_sources():
+    print '\nAvailable projection sources;'
+    for title, source, _ in projection_sources:
+        print '{}: {}'.format(title, source)
 
 
-def match_players():
-    player_dict = {p[1]: p[0] for p in PLAYERS}
-    names = player_dict.keys()
-    for title, data, _ in projections:
-        player_list = load_obj(data)
-        for p in player_list:
-            if p.name in names:
-                name = p.name
-            else:
-                name = fuzzy_match(names, map_team_name(p.team_code) if p.position == 'D' else p.name)
-
-            if name:
-                print "union select {}, {}, {}, '{}', '{}'".format(16345, player_dict[name], p.fp, title, 'week 2')
+def list_player(args):
+    fd_players = load_obj("fd_players")
+    players = match_player_ids(fd_players, load_obj(args.p))
+    print '\nPlayer projections from {}'.format(args.p)
+    print_player_list(players)
 
 
-def avg_team():
-    names = [p[1] for p in PLAYERS]
-    players = {p[1]: [] for p in PLAYERS}
-    for title, data, _ in projections:
-        team = load_obj(data)
-        for p in team:
-            if p.name in names:
-                name = p.name
-            else:
-                name = fuzzy_match(names, map_team_name(p.team_code) if p.position == 'D' else p.name)
+def list_pos(args):
+    fd_players = load_obj("fd_players")
+    matched_players = [(title, match_player_ids(fd_players, load_obj(source)))
+                       for title, source, _ in projection_sources]
 
-            if name:
-                players[name].append(p)
-            else:
-                print "No match for {}1 - {}".format(p.name, p.team_code)
+    for title, team, in matched_players:
+        print '\n{}'.format(title)
+        print_all_in_pos(team, args.pos)
 
-    avg = []
-    for name, source_players in players.iteritems():
-        if len(source_players) > 0:
-            fp = math.fsum([p.fp for p in source_players]) / len(source_players)
-            p = source_players[0]
-            avg.append(Player(p.id, p.name, p.position, p.team_code, p.salary, fp))
-    return avg
+    avg = avg_team(fd_players, [team for _, team in matched_players])
+    print '\nAveraged'
+    print_all_in_pos(avg, args.pos)
 
 
-def trim_players_to_slate(player_list, slate):
+def main():
+    parser = argparse.ArgumentParser(description="NFL Team Optimiser")
+    parser.add_argument('-ls', default=False, action='store_true',
+                        help='List available sources')
+    parser.add_argument('-p', metavar='src', help='List players for a source')
+    parser.add_argument('-pos', metavar='pos', help='List players in a position')
+    parser.add_argument('-xp', metavar='pid', nargs='+', help='Exclude players from optimisations')
+    parser.add_argument('-xs', metavar='src', nargs='+', help='Exclude projection source from optimisations')
+    parser.add_argument('-fp', metavar='pid', nargs='+', help='Force specific player for optimisations')
 
-    slate_players = [(map_team_name(p.team_code) if p.position == 'D' else p.name, map_team_name(p.team_code), p.position) for p in slate]
-    slate_teams = {p[1] for p in slate_players}
+    args = parser.parse_args()
 
-    final_player_list = []
-
-    potential_players = [p for p in player_list if map_team_name(p.team_code) in slate_teams]
-
-    for p in potential_players:
-
-        name = map_team_name(p.team_code) if p.position == 'D' else p.name
-        if (name, map_team_name(p.team_code), p.position) in slate_players:
-            final_player_list.append(p)
-        else:
-            potential_slate_players = [sp for sp in slate_players
-                                       if sp[1] == map_team_name(p.team_code) and sp[2] == p.position]
-
-            mname = fuzzy_match([sp[0] for sp in potential_slate_players], name)
-            if mname is None:
-                print 'no match for - got for {}-{}'.format(name, p.team_code)
-
-
-#
-# names = player_dict.keys()
-# for title, data, _ in projections:
-#     player_list = load_obj(data)
-#     for p in player_list:
-#         if p.name in names:
-#             name = p.name
-#         else:
-#             name = fuzzy_match(names, map_team_name(p.team_code) if p.position == 'D' else p.name)
-#
-#         if name:
-#             print "union select {}, {}, {}, '{}', '{}'".format(16345, player_dict[name], p.fp, title, 'week 2')
-
-#
-# for title, data, _ in projections:
-#     score, team = optimise(load_obj(data))
-#     print_team(title, team, score)
-#
-# avg = avg_team()
-
-# avg = filter(lambda p: p.name != 'Brent Celek', avg)
-
-# score, team = optimise(avg)
-# print_team("AVG", team, score)
-
-
-# print_all_in_pos(avg, "D")
-
-
-# match_players()
-
-# 4800
-
-
-def main(args):
-    # slate_csv = args[1]
-    slate = get_slate_from_csv("slate.csv")
-    trim_players_to_slate(load_obj("nf_data"), slate)
-    trim_players_to_slate(load_obj("rg_data"), slate)
-    trim_players_to_slate(load_obj("rw_data"), slate)
-
+    if args.ls:
+        list_sources()
+    elif args.p:
+        list_player(args)
+    elif args.pos:
+        list_pos(args)
+    else:
+        optimize_team(args)
 
 if __name__ == "__main__":
-    main(sys.argv)
+    main()

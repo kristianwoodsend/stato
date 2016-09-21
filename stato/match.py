@@ -1,128 +1,61 @@
-from stato.download import get_data, projection_sources
-from stato.util import *
-
+import math
 from fuzzywuzzy import process
-
-from itertools import product
-from util import Player, print_team
-from optimise import optimise
+from util import *
 
 
-def match(main, src):
-    pairs = []
-    for pos in POSITIONS:
-        main_players = [p for p in main if p.position == pos]
-        player_names = [p.name for p in main_players]
-        matched = [p for p in src if p.position == pos and p.name in player_names]
-        unmatched = [p for p in src if p.position == pos and p.name not in player_names]
-
-        # find exact matches
-        for p in matched:
-            m = [pl for pl in main_players if pl.name == p.name][0]
-            pairs.append((m, p))
-            main_players.remove(m)
-
-        # match the others based on Levenshtein distance
-        player_names = [p.name for p in main_players]
-        # print "{pos}: {num}".format(pos=pos, num=len(unmatched))
-        for p in unmatched:
-            match = process.extract(p.name, player_names, limit=1)
-            if len(match) == 1:
-                match, score = match[0]
-                if score >= 80:
-                    # print "{} = {} ({})".format(p.name, match, score)
-                    m = [pl for pl in main_players if pl.name == match][0]
-                    pairs.append((m, p))
-                else:
-                    print "POOR MATCH FOR {} = {} ({})".format(p.name, match, score)
-            else:
-                print "NO MATCH FOR {}".format(p.name)
-
-    return pairs
+def fuzzy_match(options, text):
+    match = process.extract(text, options, limit=1)
+    if len(match) == 1:
+        match, score = match[0]
+        if score >= 80:
+            return match
+    return None
 
 
+def avg_team(players_full, teams):
+    players = {p.id: [] for p in players_full}
 
-def create_player_list(players, weights):
-    # Create list of players from input dictionaries
-
-    player_list = []
-    sources = weights.keys()
-
-    for k, v in players.items():
-        # if v['final_score']=='':
-        #     continue
-
-        try:
-            name = v['name']
-        except KeyError:
-            name = v['first_name'] + ' ' + v['last_name']
-        points = 0
-        weight = 0
-        for source in sources:
+    for team in teams:
+        for p in team:
             try:
-                fp = float(v[source])
-                points += fp * weights[source]
-                weight += weights[source]
-            except (KeyError, ValueError):
-                # print v['first_name'], v['last_name']
-                pass
-                # fp = 0.0
-                # points += fp * weights[source]
-                # weight += weights[source]
-        if weight > 0:
-            points = points / weight
-        player_list.append(Player(v['player_id'], name, v['position'], v['team_code'], float(v['salary']), points))
-    return player_list
+                players[p.id].append(p)
+            except KeyError as e:
+                print p.id
+                raise e
+
+    avg = []
+    for name, source_players in players.iteritems():
+        if len(source_players) > 0:
+            fp = round(math.fsum([p.fp for p in source_players]) / len(source_players), 2)
+            p = source_players[0]
+            avg.append(Player(p.id, p.name, p.position, p.team_code, p.salary, fp))
+    return avg
 
 
-#
-# for title, data, _ in projections:
-#     score, team = optimise(load_obj(data))
-#     print_team(title, team, score)
-#
+def match_player_ids(players_full, player_merge):
+    player_tuples = [(p.name, p.team_code, p.position) for p in players_full]
+    teams = {p.team_code for p in players_full}
 
+    matched_players = []
 
-def merge_sources(main, sources):
-    player_dict_list = {}
-    for (src_name, src_file, src_fn) in sources:
-        print src_name, src_file
-        src_data = load_obj(src_file)
-        pairs = match(main, src_data)
+    for p in [p for p in player_merge if p.team_code in teams]:
 
-        for (m, p) in pairs:
-            try:
-                pd = player_dict_list[m.id]
-            except KeyError:
-                player_dict_list[m.id] = {'player_id': m.id, 'name': m.name, 'position': m.position,
-                                          'team_code': m.team_code, 'salary': m.salary}
-                pd = player_dict_list[m.id]
-                try:
-                    pd['final_score'] = m.fp
-                except KeyError:
-                    pass  # no final score available
-            pd[src_name] = p.fp
-    return player_dict_list
+        match_name = None
 
+        if (p.name, p.team_code, p.position) in player_tuples:
+            match_name = p.name
+        else:
+            potential_matches = [m for m in player_tuples
+                                 if m[1] == p.team_code and m[2] == p.position]
+            match_name = fuzzy_match([m[0] for m in potential_matches], p.name)
 
+        if match_name:
+            match = filter(lambda sp: sp.name == match_name and
+                                      sp.position == p.position and
+                                      sp.team_code == p.team_code, players_full)[0]
 
-if __name__ == "__main__":
-    get_data()
+            matched_players.append(Player(
+                match.id, p.name, p.position, p.team_code, p.salary, p.fp
+            ))
 
-    main = load_obj("fd_players")
-    player_dict_list = merge_sources(main, projection_sources)
-
-
-    for p, v in player_dict_list.items():
-        print p, v
-
-    STEPS = 2
-    for (rw, nf, rg, dfc) in product(range(STEPS), range(STEPS), range(STEPS), range(STEPS)):
-        if rw == nf == rg == dfc == 0.0:
-            continue
-        weights = {'RotoWire': float(rw), 'NumberFire': float(nf), 'RotoGrinders': float(rg), 'DFCafe': float(dfc)}
-        player_list = create_player_list(player_dict_list, weights)
-        score, team = optimise(player_list)
-        print
-        print weights
-        print_team('final_score', team, score)
-        print
+    return matched_players

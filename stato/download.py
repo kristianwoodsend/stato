@@ -1,27 +1,11 @@
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 import urllib2
-import requests
 import csv
 import re
 import json
-from fake_useragent import UserAgent
 
-from stato.util import *
-
-
-def get_slate_from_csv(slate_csv):
-    players = []
-
-    with open(slate_csv, 'rb') as csvfile:
-        reader = csv.reader(csvfile)
-
-        next(reader, None)
-        for row in reader:
-            players.append(
-                Player(row[0], row[2] + ' ' + row[3], row[1], row[8], int(row[6]), float(row[4])))
-
-    return players
+from util import *
 
 
 def get_rw_data(data_file):
@@ -37,9 +21,11 @@ def get_rw_data(data_file):
                 id = row.attrs["data-playerid"]
                 pos = row.attrs["data-pos"]
                 name = row.find("a", class_="dplayer-link").text
-                s = int(row.find("td", class_="rwo-salary").attrs["data-salary"].replace(',' , ''))
+                s = int(row.find("td", class_="rwo-salary").attrs["data-salary"].replace(',', ''))
                 fp = float(row.find("td", class_="rwo-points").attrs["data-points"])
                 team = row.find("td", class_="rwo-team").attrs["data-team"]
+
+                name, team = normalise_team(name, team, pos)
 
                 players.append(Player(pos + id, name, pos, team, s, fp))
 
@@ -66,8 +52,15 @@ def get_rg_data(data_file):
         reader = csv.reader(response)
         index = 1
         for row in skip_last(reader):
-            players.append(
-                Player(type + str(index), row[0], type, row[2], int(row[1]), float(row[7])))
+            name = row[0]
+            pos = type
+            team = row[2]
+            sal = int(row[1])
+            fp = float(row[7])
+
+            name, team = normalise_team(name, team, pos)
+
+            players.append(Player(type + str(index), name, pos, team, sal, fp))
             index += 1
 
     save_obj(list(set(players)), data_file)
@@ -99,9 +92,15 @@ def get_nf_data(data_file):
 
                 player = row.find("td", class_="player")
                 if player:
-                    players_dict[indx]["name"] = player.a.find("span", class_="full").text
-                    players_dict[indx]["pos"] = player.contents[2].strip()[1:-1].split(",")[0]
-                    players_dict[indx]["team"] = player.contents[2].strip()[1:-1].split(",")[1]
+                    name = player.a.find("span", class_="full").text
+                    pos = player.contents[2].strip()[1:-1].split(",")[0]
+                    team = player.contents[2].strip()[1:-1].split(",")[1]
+
+                    name, team = normalise_team(name, team, pos)
+
+                    players_dict[indx]["name"] = name
+                    players_dict[indx]["pos"] = pos
+                    players_dict[indx]["team"] = team
 
                 cost = row.find("td", class_="fanduel_cost")
                 if cost:
@@ -143,39 +142,12 @@ def get_daily_fantasy_cafe_data(data_file):
             team = p['team']
             salary = p['salaries']['fanduel']
             print name, pos, fp, team, salary
+
+            name, team = normalise_team(name, team, pos)
+
             players.append(Player(pos + str(player_id), name, pos, team, salary, fp))
         except KeyError:
             print '** ', p
-    save_obj(list(set(players)), data_file)
-
-
-def get_player_data(data_file):
-    urls = [
-        ('qb', 'http://www.footballdb.com/players/current.html?pos=QB'),
-        ('rb', 'http://www.footballdb.com/players/current.html?pos=RB'),
-        ('wr', 'http://www.footballdb.com/players/current.html?pos=WR'),
-        ('te', 'http://www.footballdb.com/players/current.html?pos=TE'),
-        ('k', 'http://www.footballdb.com/players/current.html?pos=K'),
-    ]
-
-    players = []
-
-    for pos, url in urls:
-        headers = {'User-Agent': UserAgent().random}
-        response = requests.get(url, headers=headers)
-        soup = BeautifulSoup(response.content, 'html.parser')
-
-        i = 0
-        for table in soup.find_all("table", class_="statistics"):
-            for row in [r for r in table.tbody.contents if type(r) == Tag]:
-
-                name = row.contents[0].a.text.split(",")
-                name = name[1].strip() + ' ' + name[0].strip()
-                pos = row.contents[1].text
-                team = row.contents[2].a.text
-
-                players.append(Player(pos + str(i), name, pos, team, None, None))
-
     save_obj(list(set(players)), data_file)
 
 
@@ -219,34 +191,21 @@ def get_game_data_from_final_scores(input_file, data_file):
             players.append(Player(player_id, name, pos, team, salary, fd_points))
     save_obj(list(set(players)), data_file)
 
-    # if load_obj("players"):
-    #     print "Team players already exists"
-    # else:
-    #     print "Processing team players"
-    #     get_player_data("players")
-
 
 def get_data():
 
-    if load_obj("fd_players"):
-        print "Team players already exists"
-    else:
+    if not load_obj("fd_players"):
         print "Processing team players"
-        fd_filename = '/Users/kristianwoodsend/Downloads/FanDuel-NFL-2016-09-18-16345-players-list.csv'
+        fd_filename = '../players.csv'
         get_game_data_from_fd_csv(fd_filename, "fd_players")
-
-    if load_obj("fd_players_final"):
-        print "Team players final scores already exists"
-    else:
+    #
+    if not load_obj("fd_players_final"):
         print "Processing team players final scores"
-        fd_filename = '../projections/week2_final_scores.csv'
+        fd_filename = '../results.csv'
         get_game_data_from_final_scores(fd_filename, "fd_players_final")
 
-
     for title, data_file, func in projection_sources:
-        if load_obj(data_file):
-            print "{} already exists".format(title)
-        else:
+        if not load_obj(data_file):
             print "Processing {}".format(title)
             func(data_file)
 

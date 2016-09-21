@@ -11,8 +11,8 @@ def optimise(player_list):
 
     SportConfig = namedtuple('SportConfig', "salary_cap max_players formation team_limit")
 
-    config = SportConfig(salary_cap=(60000.0-4700),
-                         max_players=8,
+    config = SportConfig(salary_cap=60000.0,
+                         max_players=9,
                          formation=[
                              {'pos': 'QB', 'n': 1},
                              {'pos': 'RB', 'n': 2},
@@ -55,6 +55,10 @@ def optimise(player_list):
     # the precompiled cbc solver file needs to be supplied by spark-submit
     # cbc_path = pyspark.SparkFiles.get('cbc')
     # solver = pulp.solvers.COIN_CMD(path=cbc_path)
+
+    # print '============='
+    # print 'LP Problem: '
+    # print prob
 
     pulp.PULP_CBC_CMD().solve(prob)
 

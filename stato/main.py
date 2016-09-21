@@ -3,7 +3,7 @@ import math
 
 from fuzzywuzzy import process
 
-from stato.download import get_data, projections, get_slate_from_csv
+from stato.download import get_data, projection_sources, get_slate_from_csv
 from stato.optimise import optimise
 from stato.util import *
 from stato.ref_data import PLAYERS, TEAM_CODE_MAPPINGS, TEAM_NAME_MAPPINGS

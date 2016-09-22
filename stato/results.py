@@ -33,6 +33,11 @@ def main(args):
 
         score, team = optimise(avg_team(fd_players, teams))
 
+        # check team players exist in results
+        for p in team:
+            if p not in results:
+                raise Exception("Player not found in results, [{}] {}".format(p.id, p.name))
+
         actual = sum([float_or_zero(get_player(results, p.id).fp) for p in team])
 
         r = [score, actual]

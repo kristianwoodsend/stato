@@ -42,7 +42,7 @@ def optimize_team(args):
         team.extend([get_player(src_players, p.id) for p in forced_players])
         print_team(title, team, score)
 
-    avg = avg_team(fd_players, [[p for p in src_players if p not in team]
+    avg = avg_team(fd_players, [[p for p in team if p not in forced_players]
                                 for _, team in matched_players])
     score, team = optimise(avg, config)
     team.extend([get_player(avg, p.id) for p in forced_players])

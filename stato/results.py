@@ -15,7 +15,7 @@ def main(args):
     STEPS = 2
     fd_players = load_obj("fd_players")
     results = load_obj("fd_players_final")
-    weights = [range(STEPS) for s in projection_sources]
+    weights = [range(STEPS) for _ in projection_sources]
     sources = [source for _, source, _ in projection_sources]
 
     weighted_result_headers = ['Proj', 'Actual']

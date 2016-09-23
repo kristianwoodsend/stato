@@ -1,5 +1,4 @@
 import pulp
-from collections import namedtuple
 from util import SportConfig
 
 NFL_CONFIG = SportConfig(salary_cap=60000.0,
@@ -15,7 +14,7 @@ NFL_CONFIG = SportConfig(salary_cap=60000.0,
                          team_limit=4)
 
 
-def optimise(player_list, config=NFL_CONFIG, force_players=None):
+def optimise(player_list, config=NFL_CONFIG, force_players=None, stack_teams=None):
 
     # Find the highest scoring team for a given game_id and list of players
     # game_id, player_list = game_row
@@ -50,6 +49,12 @@ def optimise(player_list, config=NFL_CONFIG, force_players=None):
     for team in teams:
         prob += pulp.lpSum([v for v in var_list if d_players[v.name].team_code == team]) \
             <= config.team_limit
+
+    # stack teams
+    stack_teams = stack_teams or []
+    for team_code, min_players in stack_teams:
+        prob += pulp.lpSum([v for v in var_list if d_players[v.name].team_code == team_code]) \
+            >= min_players
 
     # objective: maximise the total final score
     scores = [p.fp for p in player_list]

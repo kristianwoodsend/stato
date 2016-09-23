@@ -16,14 +16,12 @@ def optimize_team(args):
                        for title, source, _ in projection_sources
                        if source not in exclude_sources]
 
-    config = NFL_CONFIG
-
     for title, src_players, in matched_players:
-        score, team = optimise(src_players, config, force_players=args.fp)
+        score, team = optimise(src_players, force_players=args.fp, stack_teams=args.stack)
         print_team(title, team, score)
 
     avg = avg_team(fd_players, [team for _, team in matched_players])
-    score, team = optimise(avg, config, force_players=args.fp)
+    score, team = optimise(avg, force_players=args.fp, stack_teams=args.stack)
     print_team('Averaged', team, score)
 
 
@@ -54,6 +52,14 @@ def list_pos(args):
     print_all_in_pos(avg, args.pos)
 
 
+def stack_team(s):
+    try:
+        team_code, number = s.split(':')
+        return team_code, int(number)
+    except:
+        raise argparse.ArgumentTypeError("Stacked team must be teamcode:min_players")
+
+
 def main():
     parser = argparse.ArgumentParser(description="NFL Team Optimiser")
     parser.add_argument('-ls', default=False, action='store_true',
@@ -63,6 +69,7 @@ def main():
     parser.add_argument('-xp', metavar='pid', nargs='+', help='Exclude players from optimisations')
     parser.add_argument('-xs', metavar='src', nargs='+', help='Exclude projection source from optimisations')
     parser.add_argument('-fp', metavar='pid', nargs='+', help='Force specific player for optimisations')
+    parser.add_argument('-stack', metavar='team_code:min', nargs='+', type=stack_team, help='Stack a specific team')
 
     args = parser.parse_args()
 

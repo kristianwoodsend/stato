@@ -5,18 +5,6 @@ from optimise import optimise, NFL_CONFIG
 from download import projection_sources
 
 
-def modify_conf(config, player):
-    return SportConfig(
-        salary_cap=config.salary_cap - float(player.salary),
-        max_players=config.max_players - 1,
-        formation=[
-            {'pos': pos["pos"], 'n': pos["n"] - (1 if pos["pos"] == player.position else 0)}
-            for pos in config.formation if pos["n"]
-        ],
-        team_limit=4,
-    )
-
-
 def optimize_team(args):
     fd_players = load_obj("fd_players")
     if args.xp:
@@ -29,23 +17,13 @@ def optimize_team(args):
                        if source not in exclude_sources]
 
     config = NFL_CONFIG
-    forced_players = []
-
-    if args.fp:
-        for pid in args.fp:
-            p = get_player(fd_players, pid)
-            config = modify_conf(config, p)
-            forced_players.append(p)
 
     for title, src_players, in matched_players:
-        score, team = optimise([p for p in src_players if p not in forced_players], config)
-        team.extend([get_player(src_players, p.id) for p in forced_players])
+        score, team = optimise(src_players, config, force_players=args.fp)
         print_team(title, team, score)
 
-    avg = avg_team(fd_players, [[p for p in team if p not in forced_players]
-                                for _, team in matched_players])
-    score, team = optimise(avg, config)
-    team.extend([get_player(avg, p.id) for p in forced_players])
+    avg = avg_team(fd_players, [team for _, team in matched_players])
+    score, team = optimise(avg, config, force_players=args.fp)
     print_team('Averaged', team, score)
 
 

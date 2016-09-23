@@ -15,7 +15,7 @@ NFL_CONFIG = SportConfig(salary_cap=60000.0,
                          team_limit=4)
 
 
-def optimise(player_list, config=NFL_CONFIG):
+def optimise(player_list, config=NFL_CONFIG, force_players=None):
 
     # Find the highest scoring team for a given game_id and list of players
     # game_id, player_list = game_row
@@ -26,6 +26,11 @@ def optimise(player_list, config=NFL_CONFIG):
     d_players = dict((v.name, p) for (v, p) in zip(var_list, player_list))
 
     prob = pulp.LpProblem("Highest scoring team", pulp.LpMaximize)
+
+    force_players = force_players or []
+    for v in var_list:
+        if v.name[1:] in force_players:
+            prob += v == 1
 
     # add constraints to problem
     # number of players in team -- needed to handle variable formations

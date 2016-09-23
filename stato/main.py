@@ -1,3 +1,5 @@
+#! /usr/bin/env python
+
 import argparse
 from util import *
 from match import match_player_ids, avg_team

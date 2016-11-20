@@ -4,6 +4,7 @@ import urllib2
 import csv
 import re
 import json
+import random
 
 from util import *
 
@@ -126,36 +127,51 @@ def get_daily_fantasy_cafe_data(data_file):
     response = urllib2.urlopen(url)
     players = []
     soup = BeautifulSoup(response.read(), 'html.parser')
-    print soup
-    vars = soup.find_all("script")[1].string
+    vars = soup.find_all("script")[2].string
     p = re.compile('players\s=\s(.*);')
     m = p.findall(vars)
     v = json.loads(m[0])
-    print v
-    print
+    # print v
+    # print
     for p in v:
         try:
             player_id = p['id']
             name = p['name']['fanduel']
             pos = p['position']['fanduel']
-            fp = p['projections']['fanduel_gpp']
+            fp = float(p['projections']['fanduel_gpp'])
             team = p['team']
             salary = p['salaries']['fanduel']
-            print name, pos, fp, team, salary
+            # print 'name: {}, pos: {}, fp: {}, team: {}, salary: {}'.format(
+            #     name, pos, fp, team, salary)
 
             name, team = normalise_team(name, team, pos)
 
-            players.append(Player(pos + str(player_id), name, pos, team, salary, fp))
+            if fp > 4:
+                players.append(Player(pos + str(player_id), name, pos, team, salary, fp))
         except KeyError:
-            print '** ', p
+            pass
+            # print '** ', p
+
     save_obj(list(set(players)), data_file)
 
+
+def get_random(data_file):
+    players = []
+
+    for p in load_obj("fd_players"):
+        fp = random.random() * 5
+        players.append(
+            Player(p.id, p.name, p.position, p.team_code, int(p.salary), fp)
+        )
+
+    save_obj(list(set(players)), data_file)
 
 projection_sources = [
     ("NumberFire", "nf_data", get_nf_data),
     ("RotoGrinders", "rg_data", get_rg_data),
     ("RotoWire", "rw_data", get_rw_data),
     ("DFCafe", "dfc_data", get_daily_fantasy_cafe_data),
+    # ("Random", "rnd_data", get_random),
 ]
 
 
@@ -171,6 +187,9 @@ def get_game_data_from_fd_csv(input_file, data_file):
             player_id = row["Id"].split('-')[1]
             salary = row['Salary']
             fd_points = row['FPPG']
+
+            team = map_team_code(team)
+
             players.append(Player(player_id, name, pos, team, salary, fd_points))
 
     save_obj(list(set(players)), data_file)
@@ -209,4 +228,4 @@ def get_data():
             print "Processing {}".format(title)
             func(data_file)
 
-get_data()
+# get_data()

@@ -2,6 +2,7 @@ import pickle
 from collections import namedtuple
 from tabulate import tabulate
 
+
 from ref_data import TEAM_CODE_MAPPINGS, TEAM_NAME_MAPPINGS
 
 SportConfig = namedtuple('SportConfig', "salary_cap max_players formation team_limit")
@@ -54,7 +55,7 @@ def print_team(title, team, score):
 
 
 def print_all_in_pos(player_list, pos, fppd=True):
-    print_player_list(sorted([p for p in player_list if p.position == pos]), fppd)
+    print_player_list(sorted([p for p in player_list if p.position == pos and p.fp > 0]), fppd)
 
 
 def map_team_code(code):
@@ -65,11 +66,18 @@ def map_team_code(code):
 
 
 def map_team_name(code):
+
+    if code == 'GB':
+        print 'GB FOUND'
+        print TEAM_NAME_MAPPINGS.get(map_team_code(code))
+    else:
+        print code
+
     return TEAM_NAME_MAPPINGS.get(map_team_code(code))
 
 
 def normalise_team(name, team, pos):
-    team = map_team_code(team)
+    team = str(map_team_code(team))
     if pos == 'D':
         name = map_team_name(team)
     return (name, team)

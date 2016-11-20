@@ -1,6 +1,6 @@
 import sys
 from itertools import product
-from stato.download import get_data, projection_sources
+from stato.download import get_data, projection_sources, get_random
 from stato.optimise import optimise
 from stato.util import *
 from stato.match import match_player_ids, avg_team
@@ -12,9 +12,11 @@ def weight_player(p, weight):
 
 def main(args):
 
+    get_random("rnd_data")
     STEPS = 2
     fd_players = load_obj("fd_players")
     results = load_obj("fd_players_final")
+
     weights = [range(STEPS) for _ in projection_sources]
     sources = [source for _, source, _ in projection_sources]
 
@@ -35,7 +37,7 @@ def main(args):
 
         # check team players exist in results
         for p in team:
-            if p not in results:
+            if p.id not in [p.id for p in results]:
                 raise Exception("Player not found in results, [{}] {}".format(p.id, p.name))
 
         actual = sum([float_or_zero(get_player(results, p.id).fp) for p in team])
@@ -52,3 +54,9 @@ def main(args):
 
 if __name__ == "__main__":
     main(sys.argv)
+    main(sys.argv)
+    main(sys.argv)
+    main(sys.argv)
+    main(sys.argv)
+
+

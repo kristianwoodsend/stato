@@ -35,9 +35,9 @@ def optimize_team(args):
                        for title, source, _ in projection_sources
                        if source not in exclude_sources]
 
-    # for title, src_players, in matched_players:
-    #     score, team = optimise(src_players, force_players=args.fp, stack_teams=args.stack)
-    #     print_team(title, team, score)
+    for title, src_players, in matched_players:
+        score, team = optimise(src_players, force_players=args.fp, stack_teams=args.stack)
+        print_team(title, team, score)
 
     avg = avg_team(fd_players, [team for _, team in matched_players])
     score, team = optimise(avg, force_players=args.fp, stack_teams=args.stack)

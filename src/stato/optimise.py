@@ -1,27 +1,44 @@
 import pulp
-from util import SportConfig
-
-NFL_CONFIG = SportConfig(salary_cap=60000.0,
-                         max_players=9,
-                         formation=[
-                             {'pos': 'QB', 'n': 1},
-                             {'pos': 'RB', 'n': 2},
-                             {'pos': 'WR', 'n': 3},
-                             {'pos': 'TE', 'n': 1},
-                             {'pos': 'K',  'n': 1},
-                             {'pos': 'D',  'n': 1},
-                         ],
-                         team_limit=4)
+from .util import SportConfig
 
 
-def optimise(player_list, config=NFL_CONFIG, force_players=None, stack_teams=None):
+def get_config(sport):
+    if sport == 'NFL':
+        return SportConfig(
+            salary_cap=60000.0,
+            max_players=9,
+            formation=[
+                {'pos': 'QB', 'n': 1},
+                {'pos': 'RB', 'n': 2},
+                {'pos': 'WR', 'n': 3},
+                {'pos': 'TE', 'n': 1},
+                {'pos': 'K',  'n': 1},
+                {'pos': 'D',  'n': 1},
+            ],
+            team_limit=4
+        )
+    elif sport == 'NBA':
+        return SportConfig(
+            salary_cap=60000.0,
+            max_players=9,
+            formation=[
+                {'pos': 'PG', 'n': 2},
+                {'pos': 'SG', 'n': 2},
+                {'pos': 'SF', 'n': 2},
+                {'pos': 'PF', 'n': 2},
+                {'pos': 'C', 'n': 1},
+            ],
+            team_limit=4
+        )
+    else:
+        raise Exception()
 
-    # Find the highest scoring team for a given game_id and list of players
-    # game_id, player_list = game_row
 
+def optimise_team(player_list, sport, force_players=None, stack_teams=None):
+    config = get_config(sport)
     player_list = [p for p in player_list if p.salary > 0]
 
-    var_list = [pulp.LpVariable('P' + p.id, cat='Binary') for p in player_list]
+    var_list = [pulp.LpVariable('P' + str(p.id), cat='Binary') for p in player_list]
     d_players = dict((v.name, p) for (v, p) in zip(var_list, player_list))
 
     prob = pulp.LpProblem("Highest scoring team", pulp.LpMaximize)

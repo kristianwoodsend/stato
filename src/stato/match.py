@@ -1,6 +1,7 @@
 import math
 from fuzzywuzzy import process
-from util import *
+
+from .util import *
 
 
 def fuzzy_match(options, text):
@@ -37,6 +38,11 @@ def match_player_ids(players_full, player_merge):
     teams = {p.team_code for p in players_full}
 
     matched_players = []
+    unmatched_players = []
+
+    unknown_teams = set([str(p.team_code) for p in player_merge if p.team_code not in teams])
+    if unknown_teams:
+        warn("Team codes not found in slate: [{}]".format(', '.join(unknown_teams)))
 
     for p in [p for p in player_merge if p.team_code in teams]:
 
@@ -50,12 +56,23 @@ def match_player_ids(players_full, player_merge):
             match_name = fuzzy_match([m[0] for m in potential_matches], p.name)
 
         if match_name:
-            match = filter(lambda sp: sp.name == match_name and
-                                      sp.position == p.position and
-                                      sp.team_code == p.team_code, players_full)[0]
+            def player_match(player):
+                return player.name == match_name and \
+                    player.position == p.position and \
+                    player.team_code == p.team_code
+
+            match = next((sp for sp in players_full if player_match(sp)))
 
             matched_players.append(Player(
                 match.id, p.name, p.position, p.team_code, p.salary, p.fp
             ))
+        else:
+            unmatched_players.append(p)
+
+    if len(unmatched_players) > 0:
+        warn([
+            "{}/{}/{} not matched".format(p.team_code, p.position, p.name)
+            for p in unmatched_players
+        ])
 
     return matched_players

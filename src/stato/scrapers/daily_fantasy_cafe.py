@@ -6,10 +6,7 @@ from ..util import Player, get_url
 
 
 def get_nfl_data():
-    return [
-        Player(p.id, p.name, p.position, p.team_code, p.salary, p.fp)
-        for p in process_url('https://www.dailyfantasycafe.com/tools/lineupoptimizer/nfl')
-    ]
+    return process_url('https://www.dailyfantasycafe.com/tools/lineupoptimizer/nfl')
 
 
 def get_nba_data():

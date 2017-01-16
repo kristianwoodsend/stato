@@ -5,10 +5,7 @@ from ..util import Player, get_url
 
 def get_nfl_data():
     url = "http://www.rotowire.com/daily/nfl/optimizer.php?site=FanDuel&sport=NFL"
-    return [
-        Player(p.id, p.name, p.position, p.team_code, p.salary, p.fp)
-        for p in process_url(url)
-    ]
+    return process_url(url)
 
 
 def get_nba_data():

@@ -84,38 +84,18 @@ def parse_nba(http_response):
     html = BeautifulSoup(http_response.read(), 'html.parser')
     players = []
 
-    players_dict = {}
-    for table in html.find_all("table", class_="projection-table"):
+    for table in html.find_all("table", class_="stat-table"):
         for row in [r for r in table.tbody.contents if type(r) == Tag]:
+            player_info = row.find("span", class_="player-info")
+            name = player_info.find("a", class_="full").text.strip()
+            pos = player_info.find("span", class_="player-info--position").text
+            team = player_info.find("span", class_="team-player__team active").text.strip()
+            cost_cell = row.find("td", class_="cost")
+            cost = int(''.join([s for s in cost_cell.text if s in string.digits]))
+            fp = row.find("td", class_="fp").text.strip()
 
-            indx = row.attrs["data-row-index"]
-            if indx not in players_dict:
-                players_dict[indx] = {}
-
-            player = row.find("span", class_="player-info")
-            if player:
-                name = player.find("a", class_="full").text
-                pos = player.find("span", class_="player-info--position").text
-                team = player.find("span", class_="team-player__team active").text
-
-                players_dict[indx]["name"] = name.strip()
-                players_dict[indx]["pos"] = pos
-                players_dict[indx]["team"] = team.strip()
-
-            cost = row.find("td", class_="cost")
-            if cost:
-                cost = ''.join([s for s in cost.text if s in string.digits])
-                if cost != "N/A":
-                    cost = int(cost)
-                players_dict[indx]["cost"] = cost
-
-            fp = row.find("td", class_="fp")
-            if fp:
-                players_dict[indx]["fp"] = float(fp.text.strip())
-
-    players.extend([
-        Player(k, v.get("name"), v.get("pos"), v.get("team"), v.get("cost"), v.get("fp"))
-        for k, v in players_dict.iteritems() if v.get('cost') != 'N/A']
-    )
+            players.append(
+                Player("", name, pos, team, cost, fp)
+            )
 
     return players

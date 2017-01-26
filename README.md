@@ -41,7 +41,7 @@ Options:
   -xs, --exclude_source TEXT  Exclude a projection source
   -xp, --exclude_player TEXT  Exclude a player
   -fp, --force_player TEXT    Force a player
-  -rnd, --random              Include a random projection for each player
+  -n, --noise INTEGER         % weighting spread on projections
 ```
 
 ### update

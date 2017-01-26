@@ -106,8 +106,8 @@ def view(sport, name, src, pos, team_code, fp, fppk):
 @click.option("--exclude_source", "-xs", help="Exclude a projection source", multiple=True)
 @click.option("--exclude_player", "-xp", help="Exclude a player", multiple=True)
 @click.option("--force_player", "-fp", help="Force a player", multiple=True)
-@click.option("--random", "-rnd", "use_random", help="Include a random projection for each player", is_flag=True)
-def optimise(sport, name, exclude_source, exclude_player, force_player, use_random):
+@click.option("--noise", "-n", type=click.INT, default=0, help="% weighting spread on projections")
+def optimise(sport, name, exclude_source, exclude_player, force_player, noise):
     projections = get_slate_players_projections(sport, name)
 
     for source in exclude_source:
@@ -121,12 +121,6 @@ def optimise(sport, name, exclude_source, exclude_player, force_player, use_rand
     for source, players in projections.iteritems():
         for p in players:
             player_projections.setdefault(str(p.id), []).append(p)
-
-    if use_random:
-        for id, projections in player_projections.iteritems():
-            p = projections[0]
-            fp = random.random() * 10
-            projections.append(Player(p.id, p.name, p.position, p.team_code, p.salary, fp))
 
     for player_id in exclude_player:
         if player_id in player_projections.keys():
@@ -143,7 +137,8 @@ def optimise(sport, name, exclude_source, exclude_player, force_player, use_rand
 
     avg = []
     for _, projections in player_projections.iteritems():
-        fp = round(math.fsum([p.fp for p in projections]) / len(projections), 2)
+        n = 1 + (((random.random() * noise) - (noise/2.0)) / 100)
+        fp = round(math.fsum([p.fp for p in projections]) / len(projections), 2) * n
         p = projections[0]
         avg.append(Player(p.id, p.name, p.position, p.team_code, p.salary, fp))
 

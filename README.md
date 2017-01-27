@@ -44,6 +44,19 @@ Options:
   -n, --noise INTEGER         % weighting spread on projections
 ```
 
+### noise test
+Run the optimiser multiple times with noise and log the number of picks each player recieved.
+
+```
+Usage: stato noise_test [OPTIONS] SPORT NAME
+
+Options:
+  -i, --iterations INTEGER    Number of optimisations to run
+  -xs, --exclude_source TEXT  Exclude a projection source
+  -xp, --exclude_player TEXT  Exclude a player
+  -n, --noise INTEGER         % weighting spread on projections
+```
+
 ### update
 Update player projections  
 

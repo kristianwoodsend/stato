@@ -4,6 +4,8 @@ import click
 import ConfigParser
 import re
 import threading
+import random
+import math
 
 import urllib2
 import os
@@ -120,3 +122,13 @@ def team_code_translations(sport):
     except:
         return {}
 
+
+def average_projections(player_projections, noise=1.0):
+    avg = []
+    for _, projections in player_projections.iteritems():
+        n = 1 + (((random.random() * noise) - (noise/2.0)) / 100)
+        fp = round(math.fsum([p.fp for p in projections]) / len(projections), 2) * n
+        p = projections[0]
+        avg.append(Player(p.id, p.name, p.position, p.team_code, p.salary, fp))
+
+    return avg

@@ -1,7 +1,5 @@
 #! /usr/bin/env python
 import click
-import math
-import random
 import os
 from importlib import import_module
 import shutil
@@ -11,7 +9,7 @@ from tabulate import tabulate
 
 from .optimise import optimise_team
 from .util import print_team, print_player_list, Player, warn, echo, set_config, \
-    team_code_translations
+    team_code_translations, average_projections
 from .db import do_updates
 from .data import (
     create_slate, get_slate_players_projections, create_slate_projections,
@@ -135,13 +133,7 @@ def optimise(sport, name, exclude_source, exclude_player, force_player, noise):
         else:
             warn('Player {} not found in projections'.format(player_id))
 
-    avg = []
-    for _, projections in player_projections.iteritems():
-        n = 1 + (((random.random() * noise) - (noise/2.0)) / 100)
-        fp = round(math.fsum([p.fp for p in projections]) / len(projections), 2) * n
-        p = projections[0]
-        avg.append(Player(p.id, p.name, p.position, p.team_code, p.salary, fp))
-
+    avg = average_projections(player_projections, noise)
     score, team = optimise_team(avg, sport, force_players=force_players)
     print_team('Optimised Team', team, score)
 
@@ -189,6 +181,60 @@ def update(sport, name, source_filter, exclude_source, use_cache):
         matched = create_slate_projections(sport, name, source_name, players)
         echo("Matched {}/{} players".format(matched, len(players)))
         echo("")
+
+
+@main.command()
+@click.argument('sport')
+@click.argument('name')
+@click.option("--iterations", "-i", default=10, help="Number of optimisations to run")
+@click.option("--exclude_source", "-xs", help="Exclude a projection source", multiple=True)
+@click.option("--exclude_player", "-xp", help="Exclude a player", multiple=True)
+@click.option("--noise", "-n", type=click.INT, default=5, help="% weighting spread on projections")
+def noise_test(sport, name, iterations, exclude_source, exclude_player, noise):
+    projections = get_slate_players_projections(sport, name)
+
+    for source in exclude_source:
+        if source in projections.keys():
+            projections.pop(source)
+        else:
+            warn('Source "{}" not found in projections'.format(source))
+
+    player_projections = {}
+
+    for source, players in projections.iteritems():
+        for p in players:
+            player_projections.setdefault(str(p.id), []).append(p)
+
+    for player_id in exclude_player:
+        if player_id in player_projections.keys():
+            player_projections.pop(player_id)
+        else:
+            warn('Player {} not found in projections'.format(player_id))
+
+    positions = {}
+    for i in range(0, iterations):
+        avg = average_projections(player_projections, noise)
+        score, team = optimise_team(avg, sport)
+
+        for p in team:
+            positions.setdefault(p.position, {}).setdefault(p.id, []).append(p)
+
+    echo("Ran {} iterations with {}% noise".format(iterations, noise), bold=True)
+    for pos in sorted(positions.keys()):
+        players = positions[pos]
+
+        echo("")
+        echo("Position: {}".format(pos), bold=True)
+
+        chosen = []
+        for id, p in players.iteritems():
+            chosen.append((p[0].id, p[0].name, p[0].salary, len(p)))
+
+        table = tabulate(
+            sorted(chosen, cmp=lambda x, y: cmp(y[3], x[3])),
+            headers=['ID', 'Player', 'Salary', '# Picks']
+        )
+        echo(table)
 
 
 if __name__ == "__main__":

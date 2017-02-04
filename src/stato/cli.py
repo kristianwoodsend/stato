@@ -13,7 +13,7 @@ from .util import print_team, print_player_list, Player, warn, echo, set_config,
 from .db import do_updates
 from .data import (
     create_slate, get_slate_players_projections, create_slate_projections,
-    list_slates, list_sources
+    list_slates, list_sources, get_source
 )
 from .scrapers.fanduel import parse_players_csv
 
@@ -45,10 +45,20 @@ def list(sport):
 @main.command()
 @click.argument('sport')
 @click.argument('name')
-@click.argument('filename')
+@click.argument('uri')
 @click.pass_context
-def add(ctx, sport, name, filename):
-    players = parse_players_csv(filename)
+def add(ctx, sport, name, uri):
+
+    source = get_source(sport, "FanDuel")
+    package = source[3]
+    module = source[4]
+    method = source[5]
+
+    echo("Getting players", bold=True)
+    parsing_module = import_module("{}.{}".format(package, module))
+    parsing_method = getattr(parsing_module, method)
+    players = parsing_method(uri)
+
     create_slate(sport, name, players)
     create_slate_projections(sport, name, 'FanDuel', players)
 

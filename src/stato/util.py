@@ -55,12 +55,18 @@ def print_all_in_pos(player_list, pos, fppd=True):
     print_player_list(sorted([p for p in player_list if p.position == pos and p.fp > 0]), fppd)
 
 
-def get_url(url):
+def get_url(url, headers=None):
     pattern = re.compile('[\W_]+', re.UNICODE)
     file = os.path.join(os.path.expanduser('~'), '.stato', 'cache', pattern.sub('_', url))
 
     if not config.use_cache or not os.path.exists(file):
-        response = urllib2.urlopen(url)
+
+        request = urllib2.Request(url)
+        if headers:
+            for name, value in headers:
+                request.add_header(name, value)
+
+        response = urllib2.urlopen(request)
         with open(file, "w") as f:
             f.write(response.read())
     else:

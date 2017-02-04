@@ -30,6 +30,18 @@ def get_config(sport):
             ],
             team_limit=4
         )
+    elif sport == 'SOC':
+        return SportConfig(
+            salary_cap=10e7,
+            max_players=11,
+            formation=[
+                {'pos': 'F', 'min': 1, 'max': 3},
+                {'pos': 'C', 'min': 3, 'max': 5},
+                {'pos': 'D', 'min': 3, 'max': 5},
+                {'pos': 'G', 'n': 1},
+            ],
+            team_limit=4
+        )
     else:
         raise Exception()
 
@@ -58,8 +70,23 @@ def optimise_team(player_list, sport, force_players=None, stack_teams=None):
 
     # limit the number in each player position
     for position in config.formation:
-        prob += pulp.lpSum([v for v in var_list
-                            if d_players[v.name].position == position['pos']]) == position['n']
+        if 'n' in position:
+            prob += pulp.lpSum([
+                v for v in var_list
+                if d_players[v.name].position == position['pos']
+            ]) == position['n']
+
+        if 'min' in position:
+            prob += pulp.lpSum([
+                v for v in var_list
+                if d_players[v.name].position == position['pos']
+            ]) >= position['min']
+
+        if 'max' in position:
+            prob += pulp.lpSum([
+                v for v in var_list
+                if d_players[v.name].position == position['pos']
+            ]) <= position['max']
 
     # max of 4 players from each team
     teams = set([p.team_code for p in player_list])

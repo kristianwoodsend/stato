@@ -130,5 +130,12 @@ def get_slate_players_projections(sport, name):
     return projections
 
 
+def get_source(sport, source):
+    return select(
+        "select * from source where sport_id=? and name=?;",
+        (_get_sport_id(sport), source)
+    )[0]
+
+
 def list_sources(sport):
     return select("select * from source where sport_id=?;", (_get_sport_id(sport),))

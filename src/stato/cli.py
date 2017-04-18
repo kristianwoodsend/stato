@@ -13,7 +13,7 @@ from .util import print_team, print_player_list, Player, warn, echo, set_config,
 from .db import do_updates
 from .data import (
     create_slate, get_slate_players_projections, create_slate_projections,
-    list_slates, list_sources
+    list_slates, list_sources, get_source
 )
 from .scrapers.fanduel import parse_players_csv
 
@@ -45,10 +45,20 @@ def list(sport):
 @main.command()
 @click.argument('sport')
 @click.argument('name')
-@click.argument('filename')
+@click.argument('uri')
 @click.pass_context
-def add(ctx, sport, name, filename):
-    players = parse_players_csv(filename)
+def add(ctx, sport, name, uri):
+
+    source = get_source(sport, "FanDuel")
+    package = source[3]
+    module = source[4]
+    method = source[5]
+
+    echo("Getting players", bold=True)
+    parsing_module = import_module("{}.{}".format(package, module))
+    parsing_method = getattr(parsing_module, method)
+    players = parsing_method(uri)
+
     create_slate(sport, name, players)
     create_slate_projections(sport, name, 'FanDuel', players)
 
@@ -105,7 +115,8 @@ def view(sport, name, src, pos, team_code, fp, fppk):
 @click.option("--exclude_player", "-xp", help="Exclude a player", multiple=True)
 @click.option("--force_player", "-fp", help="Force a player", multiple=True)
 @click.option("--noise", "-n", type=click.INT, default=0, help="% weighting spread on projections")
-def optimise(sport, name, exclude_source, exclude_player, force_player, noise):
+@click.option("--salary_cap", "-sc", type=click.INT, help="per player salary cap")
+def optimise(sport, name, exclude_source, exclude_player, force_player, noise, salary_cap):
     projections = get_slate_players_projections(sport, name)
 
     for source in exclude_source:
@@ -118,6 +129,9 @@ def optimise(sport, name, exclude_source, exclude_player, force_player, noise):
 
     for source, players in projections.iteritems():
         for p in players:
+            if salary_cap and p.salary > salary_cap:
+                continue
+
             player_projections.setdefault(str(p.id), []).append(p)
 
     for player_id in exclude_player:
@@ -190,7 +204,8 @@ def update(sport, name, source_filter, exclude_source, use_cache):
 @click.option("--exclude_source", "-xs", help="Exclude a projection source", multiple=True)
 @click.option("--exclude_player", "-xp", help="Exclude a player", multiple=True)
 @click.option("--noise", "-n", type=click.INT, default=5, help="% weighting spread on projections")
-def noise_test(sport, name, iterations, exclude_source, exclude_player, noise):
+@click.option("--salary_cap", "-sc", type=click.INT, help="per player salary cap")
+def noise_test(sport, name, iterations, exclude_source, exclude_player, noise, salary_cap):
     projections = get_slate_players_projections(sport, name)
 
     for source in exclude_source:
@@ -203,6 +218,9 @@ def noise_test(sport, name, iterations, exclude_source, exclude_player, noise):
 
     for source, players in projections.iteritems():
         for p in players:
+            if salary_cap and p.salary > salary_cap:
+                continue
+
             player_projections.setdefault(str(p.id), []).append(p)
 
     for player_id in exclude_player:

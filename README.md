@@ -42,6 +42,7 @@ Options:
   -xp, --exclude_player TEXT  Exclude a player
   -fp, --force_player TEXT    Force a player
   -n, --noise INTEGER         % weighting spread on projections
+  -sc, --salary_cap INTEGER   per player salary cap
 ```
 
 ### noise test
@@ -55,6 +56,7 @@ Options:
   -xs, --exclude_source TEXT  Exclude a projection source
   -xp, --exclude_player TEXT  Exclude a player
   -n, --noise INTEGER         % weighting spread on projections
+  -sc, --salary_cap INTEGER   per player salary cap  
 ```
 
 ### update

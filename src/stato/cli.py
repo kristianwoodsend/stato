@@ -115,7 +115,8 @@ def view(sport, name, src, pos, team_code, fp, fppk):
 @click.option("--exclude_player", "-xp", help="Exclude a player", multiple=True)
 @click.option("--force_player", "-fp", help="Force a player", multiple=True)
 @click.option("--noise", "-n", type=click.INT, default=0, help="% weighting spread on projections")
-def optimise(sport, name, exclude_source, exclude_player, force_player, noise):
+@click.option("--salary_cap", "-sc", type=click.INT, help="per player salary cap")
+def optimise(sport, name, exclude_source, exclude_player, force_player, noise, salary_cap):
     projections = get_slate_players_projections(sport, name)
 
     for source in exclude_source:
@@ -128,6 +129,9 @@ def optimise(sport, name, exclude_source, exclude_player, force_player, noise):
 
     for source, players in projections.iteritems():
         for p in players:
+            if salary_cap and p.salary > salary_cap:
+                continue
+
             player_projections.setdefault(str(p.id), []).append(p)
 
     for player_id in exclude_player:
@@ -200,7 +204,8 @@ def update(sport, name, source_filter, exclude_source, use_cache):
 @click.option("--exclude_source", "-xs", help="Exclude a projection source", multiple=True)
 @click.option("--exclude_player", "-xp", help="Exclude a player", multiple=True)
 @click.option("--noise", "-n", type=click.INT, default=5, help="% weighting spread on projections")
-def noise_test(sport, name, iterations, exclude_source, exclude_player, noise):
+@click.option("--salary_cap", "-sc", type=click.INT, help="per player salary cap")
+def noise_test(sport, name, iterations, exclude_source, exclude_player, noise, salary_cap):
     projections = get_slate_players_projections(sport, name)
 
     for source in exclude_source:
@@ -213,6 +218,9 @@ def noise_test(sport, name, iterations, exclude_source, exclude_player, noise):
 
     for source, players in projections.iteritems():
         for p in players:
+            if salary_cap and p.salary > salary_cap:
+                continue
+
             player_projections.setdefault(str(p.id), []).append(p)
 
     for player_id in exclude_player:

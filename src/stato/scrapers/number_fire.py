@@ -39,6 +39,13 @@ def get_nba_data():
     ], parse_nba)
 
 
+def get_mlb_data():
+    return process_urls([
+        'https://www.numberfire.com/mlb/daily-fantasy/daily-baseball-projections/batters',
+        'https://www.numberfire.com/mlb/daily-fantasy/daily-baseball-projections/pitchers',
+    ], parse_mlb)
+
+
 def parse_nfl(http_response):
     html = BeautifulSoup(http_response.read(), 'html.parser')
     players = []
@@ -98,4 +105,28 @@ def parse_nba(http_response):
                 Player("", name, pos, team, cost, fp)
             )
 
+    return players
+
+
+def parse_mlb(http_response):
+    html = BeautifulSoup(http_response.read(), 'html.parser')
+    players = []
+
+    for table in html.find_all("table", class_="stat-table"):
+        for row in [r for r in table.tbody.contents if type(r) == Tag]:
+            player_info = row.find("span", class_="player-info")
+            name = player_info.find("a", class_="full").text.strip()
+            pos = player_info.find("span", class_="player-info--position").text
+            team = player_info.find("span", class_="team-player__team active").text.strip()
+            try:
+                cost_cell = row.find("td", class_="cost")
+                cost = int(''.join([s for s in cost_cell.text if s in string.digits]))
+                fp = row.find("td", class_="fp active").text.strip()
+            except ValueError:
+                # no cost and no points => not available
+                continue
+
+            players.append(
+                Player("", name, pos, team, cost, fp)
+            )
     return players

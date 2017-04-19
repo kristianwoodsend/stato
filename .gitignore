@@ -6,3 +6,10 @@
 *.pyc
 
 *.pkl
+
+.idea/*
+build/*
+dist/*
+playerlists/*
+src/stato.egg-info/
+NFL-data/*

@@ -13,6 +13,10 @@ def get_nba_data():
     return process_url('https://www.dailyfantasycafe.com/tools/lineupoptimizer/nba')
 
 
+def get_mlb_data():
+    return process_url('https://www.dailyfantasycafe.com/tools/lineupoptimizer/mlb')
+
+
 def process_url(url):
     response = get_url(url)
     players = []

@@ -13,6 +13,11 @@ def get_nba_data():
     return process_url(url)
 
 
+def get_mlb_data():
+    url = "http://www.rotowire.com/daily/mlb/optimizer.php?site=FanDuel&sport=MLB"
+    return process_url(url)
+
+
 def process_url(url):
     response = get_url(url)
     players = []

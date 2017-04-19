@@ -20,6 +20,13 @@ def get_nba_data():
     )
 
 
+def get_mlb_data():
+    return process_urls([
+        'https://rotogrinders.com/projected-stats/mlb-hitter.csv?site=fanduel',
+        'https://rotogrinders.com/projected-stats/mlb-pitcher.csv?site=fanduel'
+    ], parser)
+
+
 def parser(http_response):
     players = []
     reader = csv.reader(http_response)

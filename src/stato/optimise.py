@@ -42,6 +42,21 @@ def get_config(sport):
             ],
             team_limit=4
         )
+    elif sport == 'MLB':
+        return SportConfig(
+            salary_cap=35000.0,
+            max_players=9,
+            formation=[
+                {'pos': 'P', 'n': 1},
+                {'pos': 'C', 'n': 1},
+                {'pos': '1B', 'n': 1},
+                {'pos': '2B', 'n': 1},
+                {'pos': '3B', 'n': 1},
+                {'pos': 'SS', 'n': 1},
+                {'pos': 'OF', 'n': 3},
+            ],
+            team_limit=4
+        )
     else:
         raise Exception()
 
